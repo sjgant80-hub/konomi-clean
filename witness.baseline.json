@@ -1,0 +1,27 @@
+[
+  {
+    "mutation": "<= → <",
+    "snippet": "if (w.length <= size) return new Set([w.join(' ')]);",
+    "reason": "shingle.mjs:52 — At w.length === size the sliding path emits exactly one shingle — w.slice(0,size) — which is the whole text, identical to the branch taken. No input distinguishes them."
+  },
+  {
+    "mutation": "< → <=",
+    "snippet": "for (let i = 0; i < k; i++) {",
+    "reason": "shingle.mjs:99 — The signature array is pre-filled to length k, so index k is undefined; the comparison v < undefined is false and nothing is written. Length and contents are unchanged."
+  },
+  {
+    "mutation": "< → <=",
+    "snippet": "if (v < sig[i]) sig[i] = v;",
+    "reason": "shingle.mjs:101 — Differs only when v equals sig[i], where the assignment writes the value already there. Idempotent."
+  },
+  {
+    "mutation": "> → >=",
+    "snippet": "const isVector = ids.length > 0 && Array.isArray(scores[ids[0]]);",
+    "reason": "contaminate.mjs:126 — With no ids, scores[ids[0]] is scores[undefined] which is undefined, and Array.isArray(undefined) is false — so isVector is false either way."
+  },
+  {
+    "mutation": "< → <=",
+    "snippet": "for (let i = 0; i < prepared.length; i++) {",
+    "reason": "contaminate.mjs:104 — With i === prepared.length the inner loop starts at j = i + 1, whose condition is immediately false, so the body never runs and prepared[i] is never dereferenced."
+  }
+]

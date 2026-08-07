@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>konomi-clean · is your benchmark already in the training data?</title>
+<meta name="description" content="Contamination checking measured by containment rather than Jaccard, per item rather than as one rate — and the only number that matters: what your headline score becomes once the leaked items are removed.">
+<style>
+:root{
+  --ink:#171512; --ink-2:#3e3a34; --ink-3:#6c665c; --rule:#e1ddd4; --paper:#faf9f5; --raise:#fff;
+  --accent:#7a5c1e; --accent-soft:#f1ebdc; --bad:#a33321; --good:#1c6b46; --warn:#96731a; --flat:#8d8b84;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --ink:#f0ede6; --ink-2:#c4beb2; --ink-3:#8d8779; --rule:#2d2925; --paper:#131211; --raise:#1b1917;
+  --accent:#d8b158; --accent-soft:#2b2416; --bad:#e0806b; --good:#63c294; --warn:#d3ab4e; --flat:#7a766e;
+}}
+:root[data-theme=dark]{
+  --ink:#f0ede6; --ink-2:#c4beb2; --ink-3:#8d8779; --rule:#2d2925; --paper:#131211; --raise:#1b1917;
+  --accent:#d8b158; --accent-soft:#2b2416; --bad:#e0806b; --good:#63c294; --warn:#d3ab4e; --flat:#7a766e;
+}
+:root[data-theme=light]{
+  --ink:#171512; --ink-2:#3e3a34; --ink-3:#6c665c; --rule:#e1ddd4; --paper:#faf9f5; --raise:#fff;
+  --accent:#7a5c1e; --accent-soft:#f1ebdc; --bad:#a33321; --good:#1c6b46; --warn:#96731a; --flat:#8d8b84;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+h1,h2,h3{text-wrap:balance;margin:0}
+a{color:var(--accent)}
+code,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header{border-bottom:1px solid var(--rule);padding:34px 0 26px;background:var(--raise);position:relative}
+.eyebrow{font:600 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(27px,4.2vw,39px);letter-spacing:-.02em;margin:12px 0 10px;font-weight:650}
+.lede{color:var(--ink-2);max-width:66ch;font-size:17px}
+.theme{position:absolute;top:18px;right:20px;background:none;border:1px solid var(--rule);color:var(--ink-3);border-radius:5px;padding:6px 10px;font:600 11px/1 var(--mono);cursor:pointer}
+.claims{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;background:var(--rule);border-block:1px solid var(--rule)}
+.claim{background:var(--paper);padding:18px 20px}
+.claim h3{font-size:13px;margin-bottom:6px}
+.claim p{margin:0;font-size:13.5px;color:var(--ink-3);line-height:1.5}
+nav.tabs{display:flex;gap:2px;border-bottom:1px solid var(--rule);margin-top:30px;flex-wrap:wrap}
+nav.tabs button{appearance:none;background:none;border:0;border-bottom:2px solid transparent;font:600 13px/1 var(--sans);color:var(--ink-3);padding:11px 14px;cursor:pointer}
+nav.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section[hidden]{display:none}
+.panel{padding:26px 0 44px}
+label{display:block;font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+textarea,input,select{width:100%;background:var(--raise);color:var(--ink);border:1px solid var(--rule);border-radius:6px;padding:10px 11px;font:13.5px/1.5 var(--mono);resize:vertical}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-top:14px}
+button.go{background:var(--accent);color:var(--raise);border:0;border-radius:6px;padding:11px 18px;font:600 14px/1 var(--sans);cursor:pointer}
+button.ghost{background:none;color:var(--ink-2);border:1px solid var(--rule);border-radius:6px;padding:10px 14px;font:600 13px/1 var(--sans);cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.headline{margin-top:20px;border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:0 9px 9px 0;background:var(--raise);padding:20px 22px}
+.headline .k{font:700 10.5px/1 var(--mono);letter-spacing:.1em;color:var(--ink-3)}
+.headline .s{font-size:18px;margin-top:10px;line-height:1.45}
+.headline .s b{font-variant-numeric:tabular-nums}
+.headline.moved{border-left-color:var(--bad)}
+.pill{display:inline-block;font:600 10px/1 var(--mono);letter-spacing:.05em;padding:4px 7px;border-radius:4px;background:var(--accent-soft)}
+.pill.EXACT{color:var(--bad)} .pill.NEAR{color:var(--bad)} .pill.PARTIAL{color:var(--warn)} .pill.CLEAN{color:var(--good)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:14px}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:600 10px/1.3 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.scroll{overflow-x:auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:9px;overflow:hidden;margin-top:18px}
+.stat{background:var(--raise);padding:14px 12px;text-align:center}
+.stat .n{font:600 23px/1.15 var(--mono)}
+.stat .l{font:600 9.5px/1.3 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-top:5px}
+.note{font-size:13px;color:var(--ink-3);margin-top:10px;max-width:74ch}
+.demo{border:1px solid var(--rule);border-radius:9px;background:var(--raise);padding:18px 20px;margin-top:16px}
+.demo .num{font:600 26px/1.2 var(--mono)}
+footer{border-top:1px solid var(--rule);padding:26px 0 46px;color:var(--ink-3);font-size:13px;margin-top:20px}
+.bad{color:var(--bad)} .good{color:var(--good)} .warn{color:var(--warn)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <button class="theme" id="theme">THEME</button>
+    <div class="eyebrow">konomi-clean</div>
+    <h1>Is your benchmark already in the training data?</h1>
+    <p class="lede">Contamination is normally reported as one number — "3% contaminated" — which tells
+      you nothing useful. This reports which items, at what overlap, and then the only figure anyone
+      actually wants: what the headline score becomes once the leaked items are removed.</p>
+  </div>
+</header>
+
+<div class="claims">
+  <div class="claim">
+    <h3>Containment, not Jaccard</h3>
+    <p>An eval item is a few dozen words; a corpus is billions. Jaccard reads ~0 even for a verbatim
+       copy, so it fails exactly on the case it was deployed to catch. Using it here is a real and
+       common bug.</p>
+  </div>
+  <div class="claim">
+    <h3>Per item, not one rate</h3>
+    <p>A rate cannot be acted on. Every item gets a verdict and an overlap figure, and verbatim copies
+       are identified as verbatim rather than approximated.</p>
+  </div>
+  <div class="claim">
+    <h3>The impact is the finding</h3>
+    <p>A headline that moves thirteen points when the leaked items are dropped was never measuring the
+       model. Detection is the easy half.</p>
+  </div>
+</div>
+
+<div class="wrap">
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="t-run" aria-selected="true" aria-controls="p-run">Check a set</button>
+    <button role="tab" id="t-measure" aria-selected="false" aria-controls="p-measure">Why containment</button>
+    <button role="tab" id="t-why" aria-selected="false" aria-controls="p-why">How it works</button>
+  </nav>
+
+  <section class="panel" id="p-run" role="tabpanel" aria-labelledby="t-run">
+    <div class="grid2">
+      <div>
+        <label for="corpus">Reference corpus — one document per line</label>
+        <textarea id="corpus" rows="9"></textarea>
+      </div>
+      <div>
+        <label for="items">Eval items — <span class="mono">id | text | score</span>, one per line</label>
+        <textarea id="items" rows="9"></textarea>
+      </div>
+    </div>
+    <div class="row">
+      <div style="flex:0 0 120px"><label for="n">n-gram size</label><input id="n" type="number" min="1" value="5"></div>
+      <button class="go" id="run">Check</button>
+      <button class="ghost" id="reset">Reset example</button>
+    </div>
+    <p class="note">Nothing leaves your browser. In practice you rarely have the training corpus — but
+      you always have your own fine-tuning data, your RAG index, and last quarter's eval set, and those
+      are where leakage most often comes from.</p>
+    <div id="out"></div>
+  </section>
+
+  <section class="panel" id="p-measure" role="tabpanel" aria-labelledby="t-measure" hidden>
+    <h2 style="font-size:19px;margin-bottom:8px">The same verbatim copy, scored both ways</h2>
+    <p class="note" style="margin-top:0">One eval item is placed inside a corpus, and the corpus is then
+      grown with unrelated text. Nothing about the copy changes. Watch what each measure says about it.</p>
+    <div id="measure"></div>
+    <p class="note">This is why the measure matters more than the algorithm. A contamination checker
+      built on Jaccard gets quieter the larger the corpus is — which is the opposite of what you need,
+      and it fails silently rather than erroring.</p>
+  </section>
+
+  <section class="panel" id="p-why" role="tabpanel" aria-labelledby="t-why" hidden>
+    <h2 style="font-size:19px;margin-bottom:10px">Verdicts</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Verdict</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill EXACT">EXACT</span></td><td>The normalised item occurs verbatim inside a reference document. Decided by substring match, not by the overlap threshold — a short item can be present word-for-word while its containment sits low, and a verbatim copy is the least ambiguous finding there is.</td></tr>
+        <tr><td><span class="pill NEAR">NEAR</span></td><td>Containment ≥ 0.8 — nearly all of the item's n-grams appear in the reference.</td></tr>
+        <tr><td><span class="pill PARTIAL">PARTIAL</span></td><td>Containment ≥ 0.3 — a substantial fragment is present. Often legitimate; worth reading.</td></tr>
+        <tr><td><span class="pill CLEAN">CLEAN</span></td><td>Below the thresholds.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 style="font-size:19px;margin:28px 0 10px">Honest limits</h2>
+    <ul class="note" style="max-width:72ch">
+      <li><b>You usually cannot see the training data.</b> This checks against a corpus you hold — your
+        own fine-tuning set, your retrieval index, a previous eval set. Absence of a finding here is
+        not evidence that a model never saw your benchmark.</li>
+      <li>Word n-grams at n ≥ 8 essentially do not recur by chance, but at small n ordinary English
+        phrasing will flag. The n is yours to set, and the default is a compromise.</li>
+      <li>MinHash mode estimates. It cannot report <span class="mono">EXACT</span>, because it has no
+        text to substring-match — it says so in the result rather than guessing.</li>
+      <li>Paraphrased contamination is not caught by any n-gram method. This finds copies, not ideas.</li>
+      <li>The 5% mark for calling an impact "material" is a reporting convenience, not a law. The delta
+        is the finding.</li>
+    </ul>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p style="margin:0 0 6px">Pure kernels, no dependencies, no network.</p>
+    <p style="margin:0"><a href="https://github.com/sjgant80-hub/konomi-clean">Source &amp; verification</a>
+      · grades from <a href="https://sjgant80-hub.github.io/konomi-rubric/">konomi-rubric</a>
+      · comparisons in <a href="https://sjgant80-hub.github.io/konomi-regress/">konomi-regress</a>
+      · gated by <a href="https://github.com/sjgant80-hub/witness">witness</a> · MIT</p>
+  </div>
+</footer>
+
+<script type="module">
+import { shingles, containment, jaccard } from './shingle.mjs';
+import { makeReference, checkSet, internalDuplicates, impact, EXACT, NEAR, PARTIAL, CLEAN } from './contaminate.mjs';
+
+const $ = s => document.querySelector(s);
+const el = (t, c, txt) => { const n = document.createElement(t); if (c) n.className = c; if (txt != null) n.textContent = txt; return n; };
+
+$('#theme').onclick = () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const sysDark = matchMedia('(prefers-color-scheme:dark)').matches;
+  document.documentElement.setAttribute('data-theme', cur ? (cur === 'dark' ? 'light' : 'dark') : (sysDark ? 'light' : 'dark'));
+};
+document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav.tabs button').forEach(x => {
+    const on = x === b; x.setAttribute('aria-selected', String(on));
+    $('#' + x.getAttribute('aria-controls')).hidden = !on;
+  });
+});
+
+const EX_CORPUS = [
+  'the treaty of westphalia was signed in 1648 and ended the thirty years war in europe',
+  'photosynthesis converts light energy into chemical energy stored in glucose molecules within chloroplasts',
+  'a binary search halves the remaining interval on each step giving logarithmic time on sorted input',
+  'shipping container throughput at the port rose by eleven percent over the preceding financial year',
+].join('\n');
+const EX_ITEMS = [
+  'q1 | The Treaty of Westphalia was signed in 1648 and ended the Thirty Years War in Europe. | 10',
+  'q2 | photosynthesis converts light energy into chemical energy stored in glucose molecules | 10',
+  'q3 | a binary search halves the remaining interval on each step, but then asks about amortised cost | 7',
+  'q4 | explain why the standard model predicts a massless photon and how symmetry breaking works | 3',
+  'q5 | derive the closed form for the sum of a geometric series and state its convergence radius | 3',
+  'q6 | describe the tidal locking of the moon and its effect on the length of the terrestrial day | 2',
+].join('\n');
+$('#corpus').value = EX_CORPUS;
+$('#items').value = EX_ITEMS;
+$('#reset').onclick = () => { $('#corpus').value = EX_CORPUS; $('#items').value = EX_ITEMS; $('#n').value = 5; run(); };
+
+function parseItems() {
+  return $('#items').value.split('\n').map(l => l.trim()).filter(Boolean).map((line, k) => {
+    const parts = line.split('|').map(s => s.trim());
+    if (parts.length >= 3) return { id: parts[0], text: parts[1], score: Number(parts[2]) };
+    if (parts.length === 2) return { id: parts[0], text: parts[1], score: null };
+    return { id: 'item-' + k, text: parts[0], score: null };
+  });
+}
+
+function run() {
+  const n = Math.max(1, parseInt($('#n').value, 10) || 5);
+  const docs = $('#corpus').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const items = parseItems();
+  const out = $('#out'); out.innerHTML = '';
+  if (!docs.length || !items.length) { out.appendChild(el('p', 'note', 'Give me a corpus and some items.')); return; }
+
+  const ref = makeReference(docs, { n });
+  const check = checkSet(items, ref, { n });
+
+  // headline first — the impact, when scores were supplied
+  const scores = {};
+  for (const it of items) if (it.score !== null && !Number.isNaN(it.score)) scores[it.id] = it.score;
+  if (Object.keys(scores).length) {
+    const imp = impact(check, scores);
+    const box = el('div', 'headline' + (imp.material ? ' moved' : ''));
+    box.appendChild(el('div', 'k', 'IMPACT ON THE HEADLINE'));
+    const s = el('div', 's');
+    if (imp.after === null) s.textContent = 'Every scored item was contaminated — there is no headline left to report.';
+    else s.innerHTML = `Your benchmark says <b>${imp.before.toFixed(2)}</b>. Excluding the ` +
+      `<b>${imp.itemsDropped}</b> leaked item${imp.itemsDropped === 1 ? '' : 's'}, it says ` +
+      `<b class="${imp.delta < 0 ? 'bad' : imp.delta > 0 ? 'good' : ''}">${imp.after.toFixed(2)}</b>` +
+      (imp.delta === 0 ? ' — unchanged.' : ` — a move of <b class="${imp.delta < 0 ? 'bad' : 'good'}">${imp.delta > 0 ? '+' : ''}${imp.delta.toFixed(2)}</b>.`);
+    box.appendChild(s);
+    if (imp.droppedIds.length) box.appendChild(el('div', 'note', 'Dropped: ' + imp.droppedIds.join(', ')));
+    out.appendChild(box);
+  }
+
+  const stats = el('div', 'stats');
+  const stat = (v, l, cls) => { const d = el('div', 'stat'); d.appendChild(el('div', 'n ' + (cls || ''), v)); d.appendChild(el('div', 'l', l)); return d; };
+  stats.appendChild(stat(String(check.total), 'items'));
+  stats.appendChild(stat(String(check.counts.EXACT), 'exact', check.counts.EXACT ? 'bad' : ''));
+  stats.appendChild(stat(String(check.counts.NEAR), 'near', check.counts.NEAR ? 'bad' : ''));
+  stats.appendChild(stat(String(check.counts.PARTIAL), 'partial', check.counts.PARTIAL ? 'warn' : ''));
+  stats.appendChild(stat(String(check.counts.CLEAN), 'clean', 'good'));
+  stats.appendChild(stat((check.rate * 100).toFixed(0) + '%', 'contaminated'));
+  out.appendChild(stats);
+
+  const t = el('table');
+  t.innerHTML = '<thead><tr><th>Item</th><th>Verdict</th><th style="text-align:right">Containment</th><th style="text-align:right">Verbatim</th><th style="text-align:right">Score</th></tr></thead>';
+  const tb = el('tbody');
+  for (const r of check.results) {
+    const tr = el('tr');
+    tr.appendChild(el('td', 'mono', r.id));
+    const v = el('td'); v.appendChild(el('span', 'pill ' + r.verdict, r.verdict)); tr.appendChild(v);
+    tr.appendChild(el('td', 'n', r.containment.toFixed(3)));
+    tr.appendChild(el('td', 'n', r.verbatim ? 'yes' : '—'));
+    const sc = items.find(i => i.id === r.id);
+    tr.appendChild(el('td', 'n', sc && sc.score !== null ? String(sc.score) : '—'));
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+  const sc = el('div', 'scroll'); sc.appendChild(t); out.appendChild(sc);
+
+  const dupes = internalDuplicates(items, { n });
+  if (dupes.length) {
+    out.appendChild(Object.assign(el('h3', null, 'Items that duplicate each other'), { style: 'font-size:15px;margin:24px 0 0' }));
+    out.appendChild(el('p', 'note', 'Near-duplicates inside a benchmark over-weight whatever they test, and quietly break the independence assumption every significance test downstream relies on. Here Jaccard IS the right measure — the question is whether two comparable items are the same item.'));
+    const dt = el('table');
+    dt.innerHTML = '<thead><tr><th>A</th><th>B</th><th style="text-align:right">Similarity</th></tr></thead>';
+    const dtb = el('tbody');
+    for (const d of dupes) {
+      const tr = el('tr');
+      tr.appendChild(el('td', 'mono', d.a)); tr.appendChild(el('td', 'mono', d.b));
+      tr.appendChild(el('td', 'n', d.similarity.toFixed(3)));
+      dtb.appendChild(tr);
+    }
+    dt.appendChild(dtb);
+    const dsc = el('div', 'scroll'); dsc.appendChild(dt); out.appendChild(dsc);
+  }
+}
+$('#run').onclick = run;
+
+// ── the measure demonstration ───────────────────────────────────────────
+{
+  const item = 'the quick brown fox jumps over the lazy dog and then keeps running down the lane';
+  const filler = i => `unrelated corpus sentence number ${i} concerning entirely different subject matter altogether`;
+  const rows = [1, 10, 100, 1000].map(n => {
+    const corpus = [item, ...Array.from({ length: n }, (_, i) => filler(i))].join(' . ');
+    const a = shingles(item, 5), b = shingles(corpus, 5);
+    return { n, c: containment(a, b), j: jaccard(a, b) };
+  });
+  const box = el('div', 'demo');
+  const t = el('table');
+  t.innerHTML = '<thead><tr><th>Corpus size</th><th style="text-align:right">Containment</th><th style="text-align:right">Jaccard</th><th>Verdict each would give</th></tr></thead>';
+  const tb = el('tbody');
+  for (const r of rows) {
+    const tr = el('tr');
+    tr.appendChild(el('td', null, `item + ${r.n} unrelated sentence${r.n === 1 ? '' : 's'}`));
+    tr.appendChild(el('td', 'n good', r.c.toFixed(4)));
+    tr.appendChild(el('td', 'n ' + (r.j < 0.3 ? 'bad' : ''), r.j.toFixed(4)));
+    const v = el('td');
+    v.innerHTML = `<span class="pill EXACT">contaminated</span> &nbsp; vs &nbsp; <span class="pill ${r.j < 0.3 ? 'CLEAN' : 'PARTIAL'}">${r.j < 0.3 ? 'clean' : 'partial'}</span>`;
+    tr.appendChild(v);
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+  const sc = el('div', 'scroll'); sc.appendChild(t); box.appendChild(sc);
+  box.appendChild(el('p', 'note', 'The item is present word-for-word in every row. Containment says so every time. Jaccard forgets.'));
+  $('#measure').appendChild(box);
+}
+
+run();
+</script>
+</body>
+</html>

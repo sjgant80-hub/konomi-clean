@@ -1,0 +1,14 @@
+{
+  "name": "konomi-clean",
+  "version": "0.1.0",
+  "description": "Eval-set contamination checking measured by containment rather than Jaccard, reported per item, with the impact on the headline score.",
+  "type": "module",
+  "main": "contaminate.mjs",
+  "exports": { ".": "./contaminate.mjs", "./shingle": "./shingle.mjs" },
+  "files": ["shingle.mjs", "contaminate.mjs", "README.md", "LICENSE"],
+  "scripts": { "test": "node test.mjs" },
+  "keywords": ["contamination", "benchmark", "llm-evaluation", "minhash", "containment", "deduplication"],
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/sjgant80-hub/konomi-clean.git" },
+  "homepage": "https://sjgant80-hub.github.io/konomi-clean/"
+}

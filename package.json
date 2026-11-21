@@ -6,7 +6,7 @@
   "main": "contaminate.mjs",
   "exports": { ".": "./contaminate.mjs", "./shingle": "./shingle.mjs" },
   "files": ["shingle.mjs", "contaminate.mjs", "README.md", "LICENSE"],
-  "scripts": { "test": "node test.mjs" },
+  "scripts": { "test": "node test.mjs && node genome.test.mjs" },
   "keywords": ["contamination", "benchmark", "llm-evaluation", "minhash", "containment", "deduplication"],
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/sjgant80-hub/konomi-clean.git" },

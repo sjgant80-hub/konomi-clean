@@ -2,6 +2,8 @@
 
 ### ▶ **Live: https://sjgant80-hub.github.io/konomi-clean/**
 
+This repository is a cell of the [estate genome](https://sjgant80-hub.github.io/estate-genome/): its `seed.json` and `genome/` hooks pass the four-trait birth check on every push.
+
 Is your benchmark already in the training data — and what does your headline score become without it?
 
 [![witness](https://github.com/sjgant80-hub/konomi-clean/actions/workflows/witness.yml/badge.svg)](https://github.com/sjgant80-hub/konomi-clean/actions/workflows/witness.yml)

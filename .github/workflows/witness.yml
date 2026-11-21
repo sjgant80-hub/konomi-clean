@@ -12,6 +12,14 @@ jobs:
         with: { node-version: '20' }
       - name: test suite
         run: node test.mjs
+      - name: genome tests (the birth check's judge, lane and health)
+        run: node genome.test.mjs
+      # genome/cell.mjs is gated with witness v0.6, CLEAN with no exemptions.
+      - name: mutation gate — genome/cell.mjs must be CLEAN
+        run: |
+          git clone --depth 1 --branch v0.6 https://github.com/sjgant80-hub/witness.git .witness
+          node .witness/witness.mjs mutate genome/cell.mjs --cap 100000 --timeout 60000 --test node genome.test.mjs | tee genome.out
+          node -e "const j=JSON.parse(require('fs').readFileSync('genome.out','utf8'));if(j.clean!==true||j.ignored.length){console.error('GENOME GATE NOT CLEAN');process.exit(1)}console.log('CLEAN '+j.killed+'/'+j.total)"
       # v0.2, not v0.1: reviewed-equivalent baselines were added after v0.1 was tagged.
       # Cap must exceed each file's mutant count or "clean" is a truncation artifact (highest here: 45).
       - name: mutation gate

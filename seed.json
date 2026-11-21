@@ -1,0 +1,76 @@
+{
+  "genome": "1",
+  "name": "konomi-clean",
+  "kind": "repo",
+  "purpose": "Checks whether evaluation items appear in a reference corpus, by containment rather than Jaccard, item by item, with what the headline score becomes once the leaked items are left out.",
+  "lane": {
+    "id": "eval-contamination-check",
+    "accepts": "an evaluation item's text and a reference corpus of documents to check it against",
+    "refuses": "an item with no reference corpus, or a corpus that is not a list of documents"
+  },
+  "interface": {
+    "in": "{item, reference}: the item (text or {id, text}) and the corpus documents; to judge, a claim: EXACT, NEAR, PARTIAL or CLEAN",
+    "out": "a per-item verdict (EXACT, NEAR, PARTIAL or CLEAN) with its containment, and the score impact across a set"
+  },
+  "judge": {
+    "what": "a claimed contamination verdict for an item is right when konomi-clean's own checkItem(), at its default shingle size and thresholds, gives the same verdict against that corpus",
+    "run": "node genome/judge.mjs",
+    "cases": {
+      "good": {
+        "item": {
+          "id": "q1",
+          "text": "The Capital of France is PARIS, and it sits on the River Seine in the north!"
+        },
+        "reference": [
+          "the capital of france is paris and it sits on the river seine in the north",
+          "photosynthesis converts light energy into chemical energy stored in glucose molecules",
+          "entirely unrelated filler about shipping logistics and container throughput at port"
+        ],
+        "claim": "EXACT"
+      },
+      "bad": {
+        "item": {
+          "id": "q1",
+          "text": "The Capital of France is PARIS, and it sits on the River Seine in the north!"
+        },
+        "reference": [
+          "the capital of france is paris and it sits on the river seine in the north",
+          "photosynthesis converts light energy into chemical energy stored in glucose molecules",
+          "entirely unrelated filler about shipping logistics and container throughput at port"
+        ],
+        "claim": "CLEAN"
+      }
+    }
+  },
+  "boundary": {
+    "run": "node genome/lane.mjs",
+    "inLane": {
+      "item": {
+        "id": "q2",
+        "text": "quantum chromodynamics describes the strong nuclear interaction between quarks"
+      },
+      "reference": [
+        "the capital of france is paris and it sits on the river seine in the north",
+        "photosynthesis converts light energy into chemical energy stored in glucose molecules",
+        "entirely unrelated filler about shipping logistics and container throughput at port"
+      ]
+    },
+    "outOfLane": {
+      "item": "Is my benchmark contaminated?",
+      "reference": "the internet"
+    },
+    "escalate": "kar"
+  },
+  "health": {
+    "run": "node genome/health.mjs"
+  },
+  "tombstone": {
+    "apply": "node genome/tombstone.mjs apply",
+    "restore": "node genome/tombstone.mjs restore"
+  },
+  "provenance": {
+    "repo": "sjgant80-hub/konomi-clean",
+    "by": "Kar, for Simon Gant",
+    "born": "2026-11-21"
+  }
+}
